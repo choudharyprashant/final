@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+    .bar {
+        fill: steelblue;
+    }
+
+    .bar:hover {
+        fill: brown;
+    }
+
+    .axis {
+        font: 10px sans-serif;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .x.axis path {
+        display: none;
+    }
+
+</style>
+<body>
+<br/><center><input type='text' id='link' value='http://localhost/xampp/Test/data.tsv' style='width:30%;font-size:20px;border-top:0px solid black;border-left:0px solid black;border-right:0px solid black;border-bottom:2px solid black;text-align:center;'>
+<input type='button' value='make chart' style='background-color:white;border:1px solid black;font-size:20px;' onclick="makeChart(document.getElementById('link').value);">
+</center><br/>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+    var div = document.createElement('div');
+    div.id='barinfo';
+    div.innerHTML='*';
+    div.style.position='absolute';
+    div.style.display='none';
+    document.body.appendChild(div);	
+ 
+    var margin = {top: 20, right: 20, bottom: 30, left: 40},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+    var x = d3.scale.ordinal()
+            .rangeRoundBands([0, width], .1);
+
+    var y = d3.scale.linear()
+            .range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left")
+            .ticks(10, "%");
+
+    var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("id","barbox")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var temp;
+    var colormap = new Array();
+    var filename;
+
+    function deleteNode(id) 
+    {
+	var myNode = document.getElementById(id);
+	while (myNode.firstChild) {
+ 	   myNode.removeChild(myNode.firstChild);
+	}}
+
+    function type(d) {
+        d.frequency = +d.frequency;
+        return d;
+    }
+
+    function makeChart(filename)
+    {
+    deleteNode("barbox");
+    d3.tsv(filename, type, function(error, data) {
+
+	x.domain(data.map(function(d) { return d.letter; }));
+        y.domain([0, d3.max(data, function(d) { return d.frequency; })]);
+        svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis)
+
+        svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("dy", ".71em")
+                .style("text-anchor", "end")
+                .text("Frequency");
+
+	temp = data;
+	temp.sort(function(a,b) {
+	    return a.frequency-b.frequency;
+	});
+
+	for (var i=0;i<temp.length;i++) {
+		if(i<=temp.length*0.33) colormap[temp[i].letter] = 'red';
+		else if(i>temp.length*0.66) colormap[temp[i].letter] = 'green'
+		else colormap[temp[i].letter] = 'yellow'
+		}
+
+
+        svg.selectAll(".bar")
+                .data(data)
+                .enter().append("rect")
+                .attr("x", function(d) { return x(d.letter); })
+                .attr("width", x.rangeBand())
+                .attr("y", function(d) { return y(d.frequency); })
+                .attr("height", function(d) { return height - y(d.frequency); })
+                .style("fill",function(d){return colormap[d.letter];}) 
+		.on("mouseover", function(d) {      
+				var barinfo = document.getElementById('barinfo');			
+				barinfo.style.left = event.clientX+'px';
+				barinfo.style.top = event.clientY+'px';
+				barinfo.innerHTML = d.frequency;
+				barinfo.style.display = 'block';
+          		})   
+		.on("mouseclick", function(d) { 
+          			var barinfo = document.getElementById('barinfo');			
+				barinfo.style.left = event.clientX+'px';
+				barinfo.style.top = event.clientY+'px';
+				barinfo.innerHTML = d.frequency;
+				barinfo.style.display = 'block';
+          		})   
+		.on("mouseout", function(d) { 
+          			var barinfo = document.getElementById('barinfo');			
+				barinfo.style.display = 'none';
+			})   
+
+    });
+    }
+
+    makeChart("http://localhost/xampp/Test/data.tsv");
+</script>
+
